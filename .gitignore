@@ -1,0 +1,20 @@
+# never commit secrets or build output
+.env
+.env.local
+backend/.env
+frontend/.env
+node_modules/
+backend/dist/
+frontend/dist/
+backend/coverage/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+docs/assets/demo.mp4
+docs/assets/demo.gif
+# local-only compose hack — never push (buyers use base file)
+docker-compose.override.yml
+backend/prisma/seed.js
+backend/prisma/seed.js.map
+.DS_Store
+*.log

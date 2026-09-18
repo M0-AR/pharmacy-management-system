@@ -1,0 +1,179 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PHARMACIST
+  TECHNICIAN
+  CASHIER
+}
+
+enum RxType {
+  RX
+  OTC
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  INSURANCE
+}
+
+enum SaleStatus {
+  COMPLETED
+  VOIDED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(CASHIER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sales        Sale[]   @relation("SoldBy")
+  movements    StockMovement[] @relation("CreatedBy")
+  audits       AuditLog[] @relation("Actor")
+}
+
+model Supplier {
+  id          String     @id @default(cuid())
+  name        String
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  medicines   Medicine[]
+}
+
+model Medicine {
+  id                String    @id @default(cuid())
+  code              String    @unique
+  name              String
+  genericName       String?
+  brand             String?
+  category          String    @default("General")
+  ndc               String?
+  rxType            RxType    @default(OTC)
+  unitPrice         Decimal   @db.Decimal(10, 2)
+  quantity          Int       @default(0)
+  lowStockThreshold Int       @default(10)
+  expiryDate        DateTime?
+  supplierId        String?
+  supplier          Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  saleItems         SaleItem[]
+  movements         StockMovement[]
+
+  @@index([name])
+  @@index([category])
+  @@index([quantity])
+  @@index([expiryDate])
+}
+
+model Customer {
+  id                String   @id @default(cuid())
+  firstName         String
+  lastName          String
+  phone             String?
+  email             String?
+  address           String?
+  dateOfBirth       DateTime?
+  allergies         String?
+  insuranceProvider String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  sales             Sale[]
+
+  @@index([lastName])
+  @@index([phone])
+}
+
+model Sale {
+  id            String        @id @default(cuid())
+  invoiceNo     String        @unique
+  customerId    String?
+  customer      Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  subtotal      Decimal       @db.Decimal(12, 2)
+  discountPct   Decimal       @default(0) @db.Decimal(5, 2)
+  discountAmt   Decimal       @default(0) @db.Decimal(12, 2)
+  taxPct        Decimal       @default(0) @db.Decimal(5, 2)
+  taxAmt        Decimal       @default(0) @db.Decimal(12, 2)
+  total         Decimal       @db.Decimal(12, 2)
+  paymentMethod PaymentMethod @default(CASH)
+  status        SaleStatus    @default(COMPLETED)
+  soldById      String?
+  soldBy        User?         @relation("SoldBy", fields: [soldById], references: [id], onDelete: SetNull)
+  createdAt     DateTime      @default(now())
+  items         SaleItem[]
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+model SaleItem {
+  id         String   @id @default(cuid())
+  saleId     String
+  sale       Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  medicineId String
+  medicine   Medicine @relation(fields: [medicineId], references: [id], onDelete: Restrict)
+  qty        Int
+  unitPrice  Decimal  @db.Decimal(10, 2)
+  lineTotal  Decimal  @db.Decimal(12, 2)
+
+  @@index([saleId])
+  @@index([medicineId])
+}
+
+model StockMovement {
+  id         String   @id @default(cuid())
+  medicineId String
+  medicine   Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  changeQty  Int
+  reason     String   @default("ADJUSTMENT")
+  refId      String?
+  note       String?
+  createdById String?
+  createdBy  User?    @relation("CreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([medicineId])
+  @@index([createdAt])
+}
+
+// White-label store profile (one row per key). Editable by ADMIN in Settings UI.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// Append-only audit trail (HIPAA technical safeguard: audit controls).
+// Application code only INSERTs + SELECTs; no UPDATE/DELETE routes exist.
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation("Actor", fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity])
+  @@index([actorId])
+}
