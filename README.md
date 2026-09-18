@@ -2,7 +2,7 @@
 
 > Open-source full-stack pharmacy POS: React 18 + Vite + Fastify + Prisma + Postgres, one-command Docker Compose. DUR safety screening, Rx verify gate, ledgered inventory, printable invoices, RBAC + audit trail.
 
-[![CI](https://img.shields.io/github/actions/workflow/status/YOUR_USER/pharmacy-management-system/ci.yml?branch=main&style=flat-square)](.github/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/M0-AR/pharmacy-management-system/ci.yml?branch=main&style=flat-square)](.github/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-compose-ready-blue.svg)](docker-compose.yml)
 [![Node 20](https://img.shields.io/badge/Node-20-brightgreen.svg)](backend/package.json)
